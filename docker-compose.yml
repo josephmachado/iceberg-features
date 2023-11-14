@@ -1,0 +1,28 @@
+version: '3'
+
+services:
+  local-spark:
+    image: local-spark
+    container_name: local-spark
+    build:
+      context: ./
+      dockerfile: ./containers/spark/Dockerfile
+    environment:
+      METADATA_DRIVERNAME: postgresql
+      METADATA_HOST: metadata
+      METADATA_PORT: '5432'
+      METADATA_USERNAME: sdeuser
+      METADATA_PASSWORD: sdepassword
+      METADATA_DATABASE: metadatadb
+    volumes:
+      - ./data:/opt/spark/work-dir/
+
+  metadata:
+    image: postgres:15
+    container_name: metadata
+    environment:
+      POSTGRES_USER: sdeuser
+      POSTGRES_PASSWORD: sdepassword
+      POSTGRES_DB: metadatadb
+    ports:
+      - "5432:5432"
