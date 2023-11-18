@@ -60,12 +60,6 @@ spark-sql --packages org.apache.iceberg:iceberg-spark-runtime-3.3_2.12:1.4.2\
     --conf spark.hadoop.hive.cli.print.header=true
 ```
 
-**Docker down** Run this command to spin down the containers
-
-```bash
-docker compose down
-```
-
 In the spark sql shell, run the following commands to create a schema and table:
 
 ```sql
@@ -219,3 +213,9 @@ order by 1 desc;
 ```
 
 In the above sql query, we use DuckDb to read Iceberg table and perform computations on it.
+
+**Docker down** Run this command to spin down the containers
+
+```bash
+docker compose down
+```
