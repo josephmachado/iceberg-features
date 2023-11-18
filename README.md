@@ -4,12 +4,12 @@
   * [Clean up](#clean-up)
   * [Docker spin up](#docker-spin-up)
   * [Create schema and tables](#create-schema-and-tables)
+- [Apache Iceberg features](#apache-iceberg-features)
   * [Schema and Partition evolution](#schema-and-partition-evolution)
   * [Time Travel](#time-travel)
   * [Tagging](#tagging)
   * [Branching](#branching)
-  * [Docker down](#docker-down)
-  * [Create spark table](#create-spark-table)
+  * [Read from another system](#read-from-another-system)
 
 
 # What is an Open Table Format (OTF) and when to use one? with Apache Iceberg
@@ -58,6 +58,12 @@ spark-sql --packages org.apache.iceberg:iceberg-spark-runtime-3.3_2.12:1.4.2\
     --conf spark.sql.catalog.local.type=hadoop \
     --conf spark.sql.catalog.local.warehouse=$PWD/iceberg-warehouse \
     --conf spark.hadoop.hive.cli.print.header=true
+```
+
+**Docker down** Run this command to spin down the containers
+
+```bash
+docker compose down
 ```
 
 In the spark sql shell, run the following commands to create a schema and table:
@@ -206,11 +212,3 @@ order by 1 desc;
 ```
 
 In the above sql query, we use DuckDb to read Iceberg table and perform computations on it.
-
-## Docker down
-
-Run this command to spin down the containers
-
-```bash
-docker compose down
-```
