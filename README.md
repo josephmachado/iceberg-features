@@ -1,7 +1,6 @@
 - [What is an Open Table Format (OTF) and when to use one? with Apache Iceberg](#what-is-an-open-table-format--otf--and-when-to-use-one--with-apache-iceberg)
 - [Setup](#setup)
   * [Prerequisites](#prerequisites)
-  * [Clean up](#clean-up)
   * [Docker spin up](#docker-spin-up)
   * [Create schema and tables](#create-schema-and-tables)
 - [Apache Iceberg features](#apache-iceberg-features)
@@ -10,7 +9,6 @@
   * [Tagging](#tagging)
   * [Branching](#branching)
   * [Read from another system](#read-from-another-system)
-
 
 # What is an Open Table Format (OTF) and when to use one? with Apache Iceberg
 
@@ -24,20 +22,22 @@ Please install the following to follow along
 
 1. [Docker](https://docs.docker.com/engine/install/)
 2. [DuckDB](https://duckdb.org/docs/installation/)
+3. [git](https://git-scm.com/downloads)
 
 **Note**: All the commands shown below are run via a terminal, If you are using Windows, use [WSL](https://ubuntu.com/tutorials/install-ubuntu-on-wsl2-on-windows-10#1-overview) to set up Ubuntu and run the following commands via that terminal.
 
-## Clean up
-
-Please use this command to clean up data from previous runs(if any).
-
+Clone this repo with 
 ```bash
-docker compose down
-rm -rf ./data
+git clone https://github.com/josephmachado/iceberg-features.git
+cd iceberg-features
 ```
+
 ## Docker spin up
 
 ```bash
+# Please use this command to clean up data from previous runs(if any).
+docker compose down
+rm -rf ./data
 docker compose up --build -d
 ```
 
