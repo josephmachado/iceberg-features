@@ -48,7 +48,9 @@ First we need to sh into the docker container and start a spark shell, please us
 ```bash
 docker exec -ti local-spark bash
 # You will be now in the spark container
+```
 
+```bash
 # Start spark sql with iceberg and local warehouse
 spark-sql --packages org.apache.iceberg:iceberg-spark-runtime-3.3_2.12:1.4.2\
     --conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions \
