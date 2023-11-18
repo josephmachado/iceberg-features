@@ -32,8 +32,8 @@ Please install the following to follow along
 Please use this command to clean up data from previous runs(if any).
 
 ```bash
-rm -rf ./data
 docker compose down
+rm -rf ./data
 ```
 ## Docker spin up
 
@@ -149,55 +149,62 @@ SELECT * FROM local.warehouse.orders;
 
 ```sql
 -- get a snapshot_id
-select committed_at, snapshot_id, manifest_list from local.warehouse.orders.snapshots;
+select committed_at, snapshot_id, manifest_list from local.warehouse.orders.snapshots order by committed_at;
 
--- Use your snapshot_id in as of version
+-- Use your snapshot_id in as of version (pick the first snapshot_id from above)
 ALTER TABLE local.warehouse.orders CREATE TAG `CHANGE-01` AS OF VERSION 3277809923527865161 RETAIN 10 DAYS;
 
 INSERT INTO local.warehouse.orders VALUES 
 ('e481f51cbdc54678b7cc49136f2d6gh5',69,CAST('2023-11-21 09:56:33' AS TIMESTAMP));
 
--- you will see a difference of 1 row
+-- you will see a difference of number of rows
 SELECT COUNT(*) FROM local.warehouse.orders;
 SELECT COUNT(*) FROM local.warehouse.orders VERSION AS OF 'CHANGE-01';
 ```
 ## Branching
 
 ```sql
+DROP TABLE IF EXISTS local.warehouse.orders_agg;
+CREATE TABLE local.warehouse.orders_agg(
+    order_date date,
+    num_orders int
+)  USING iceberg;
+INSERT INTO local.warehouse.orders_agg
+SELECT date(order_date) as order_date, count(order_id) as num_orders from local.warehouse.orders WHERE date(order_date) = '2023-11-02' GROUP BY 1;
+
 -- Create 2 branches, that are both stored for 10 days
-ALTER TABLE local.warehouse.orders_agg CREATE BRANCH `parallel-branch-v1` RETAIN 10 DAYS;
-ALTER TABLE local.warehouse.orders_agg CREATE BRANCH `parallel-branch-v2` RETAIN 10 DAYS;
+ALTER TABLE local.warehouse.orders_agg CREATE BRANCH `branch-v1` RETAIN 10 DAYS;
+ALTER TABLE local.warehouse.orders_agg CREATE BRANCH `branch-v2` RETAIN 10 DAYS;
 
 -- Use different logic for each of the branch
 
 -- inserting into branch v1
-INSERT INTO local.warehouse.orders_agg.`branch_parallel-branch-v1`
+INSERT INTO local.warehouse.orders_agg.`branch_branch-v1`
 SELECT date(order_date) as order_date, count(order_id) as num_orders from local.warehouse.orders WHERE date(order_date) = '2023-11-03' GROUP BY 1;
 
-INSERT INTO local.warehouse.orders_agg.`branch_parallel-branch-v1`
+INSERT INTO local.warehouse.orders_agg.`branch_branch-v1`
 SELECT date(order_date) as order_date, count(order_id) as num_orders from local.warehouse.orders WHERE date(order_date) = '2023-11-04' GROUP BY 1;
 
 -- inserting into branch v2
-INSERT INTO local.warehouse.orders_agg.`branch_parallel-branch-v2`
+INSERT INTO local.warehouse.orders_agg.`branch_branch-v2`
 SELECT date(order_date) as order_date, count(distinct order_id) as num_orders from local.warehouse.orders WHERE date(order_date) = '2023-11-03' GROUP BY 1;
 
-INSERT INTO local.warehouse.orders_agg.`branch_parallel-branch-v2`
+INSERT INTO local.warehouse.orders_agg.`branch_branch-v2`
 SELECT date(order_date) as order_date, count(distinct order_id) as num_orders from local.warehouse.orders WHERE date(order_date) = '2023-11-04' GROUP BY 1;
 
 -- validate data, the v2 logic is correct
-select * from local.warehouse.orders_agg.`branch_parallel-branch-v1` order by order_date;
-select * from local.warehouse.orders_agg.`branch_parallel-branch-v2` order by order_date;
+select * from local.warehouse.orders_agg.`branch_branch-v1` order by order_date;
+select * from local.warehouse.orders_agg.`branch_branch-v2` order by order_date;
 
 select * from local.warehouse.orders_agg order by order_date desc; 
 -- push main branch to branch v2's state
-CALL local.system.fast_forward('warehouse.orders_agg', 'main', 'parallel-branch-v2');
-
+CALL local.system.fast_forward('warehouse.orders_agg', 'main', 'branch-v2');
 select * from local.warehouse.orders_agg order by order_date desc;
 ```
 
 ## Read from another system
 
-Exit your docker using `exit`. From your project directory, in your terminal, run the following SQL command:
+Exit your spark shell with `exit;` and docker with `exit`. From your project directory, in your terminal open duckdb (with duckdb command), run the following SQL command:
 
 ```sql
 INSTALL iceberg;
