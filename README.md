@@ -166,23 +166,23 @@ SELECT date(order_date) as order_date, count(order_id) as num_orders from local.
 ALTER TABLE local.warehouse.orders_agg CREATE BRANCH `branch-v1` RETAIN 10 DAYS;
 ALTER TABLE local.warehouse.orders_agg CREATE BRANCH `branch-v2` RETAIN 10 DAYS;
 
--- Use different logic for each of the branch
+-- Use different logic for each of the branch & run the pipeline for 2 days
 
--- inserting into branch v1
+-- inserting into both the branches v1 & v2 for '2023-11-03'
 INSERT INTO local.warehouse.orders_agg.`branch_branch-v1`
 SELECT date(order_date) as order_date, count(order_id) as num_orders from local.warehouse.orders WHERE date(order_date) = '2023-11-03' GROUP BY 1;
 
-INSERT INTO local.warehouse.orders_agg.`branch_branch-v1`
-SELECT date(order_date) as order_date, count(order_id) as num_orders from local.warehouse.orders WHERE date(order_date) = '2023-11-04' GROUP BY 1;
-
--- inserting into branch v2
 INSERT INTO local.warehouse.orders_agg.`branch_branch-v2`
 SELECT date(order_date) as order_date, count(distinct order_id) as num_orders from local.warehouse.orders WHERE date(order_date) = '2023-11-03' GROUP BY 1;
+
+-- inserting into both the branches v1 & v2 for '2023-11-04'
+INSERT INTO local.warehouse.orders_agg.`branch_branch-v1`
+SELECT date(order_date) as order_date, count(order_id) as num_orders from local.warehouse.orders WHERE date(order_date) = '2023-11-04' GROUP BY 1;
 
 INSERT INTO local.warehouse.orders_agg.`branch_branch-v2`
 SELECT date(order_date) as order_date, count(distinct order_id) as num_orders from local.warehouse.orders WHERE date(order_date) = '2023-11-04' GROUP BY 1;
 
--- validate logic, the v2 logic is correct
+-- validate the logic. The v2 logic is correct
 select * from local.warehouse.orders_agg.`branch_branch-v1` order by order_date;
 select * from local.warehouse.orders_agg.`branch_branch-v2` order by order_date;
 
