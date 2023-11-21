@@ -1,14 +1,14 @@
-- [What is an Open Table Format (OTF) and when to use one? with Apache Iceberg](#what-is-an-open-table-format--otf--and-when-to-use-one--with-apache-iceberg)
+- [What is an Open Table Format (OTF) and when to use one? with Apache Iceberg](#what-is-an-open-table-format-otf-and-when-to-use-one-with-apache-iceberg)
 - [Setup](#setup)
-  * [Prerequisites](#prerequisites)
-  * [Docker spin up](#docker-spin-up)
-  * [Create schema and tables](#create-schema-and-tables)
+  - [Prerequisites](#prerequisites)
+  - [Docker spin up](#docker-spin-up)
+  - [Create schema and tables](#create-schema-and-tables)
 - [Apache Iceberg features](#apache-iceberg-features)
-  * [Schema and Partition evolution](#schema-and-partition-evolution)
-  * [Time Travel](#time-travel)
-  * [Tagging](#tagging)
-  * [Branching](#branching)
-  * [Read from another system](#read-from-another-system)
+  - [Schema and Partition evolution](#schema-and-partition-evolution)
+  - [Time Travel](#time-travel)
+  - [Tagging](#tagging)
+  - [Branching](#branching)
+  - [Read from another system](#read-from-another-system)
 
 # What is an Open Table Format (OTF) and when to use one? with Apache Iceberg
 
@@ -79,25 +79,17 @@ PARTITIONED BY (date(order_date));
 INSERT INTO local.warehouse.orders VALUES
 ('e481f51cbdc54678b7cc49136f2d6af7',69,'delivered',CAST('2023-11-01 09:56:33' AS TIMESTAMP)),
 ('e481f51cbdc54678b7cc49136f2d6af7',87,'delivered',CAST('2023-11-01 10:56:33' AS TIMESTAMP)),
-('e481f51cbdc54678b7cc49136f2d6af7',125,'delivered',CAST('2023-11-01 11:56:33' AS TIMESTAMP));
-
-INSERT INTO local.warehouse.orders VALUES
+('e481f51cbdc54678b7cc49136f2d6af7',125,'delivered',CAST('2023-11-01 11:56:33' AS TIMESTAMP)),
 ('53cdb2fc8bc7dce0b6741e2150273451',17,'delivered',CAST('2023-11-02 11:56:33' AS TIMESTAMP)),
-('53cdb2fc8bc7dce0b6741e2150273451',19,'on_route',CAST('2023-11-02 12:56:33' AS TIMESTAMP));
-
-INSERT INTO local.warehouse.orders VALUES
+('53cdb2fc8bc7dce0b6741e2150273451',19,'on_route',CAST('2023-11-02 12:56:33' AS TIMESTAMP)),
 ('47770eb9100c2d0c44946d9cf07ec65d',26,'on_route',CAST('2023-11-03 12:56:33' AS TIMESTAMP)),
 ('47770eb9100c2d0c44946d9cf07ec65d',99,'lost',CAST('2023-11-03 13:56:33' AS TIMESTAMP)),
 ('949d5b44dbf5de918fe9c16f97b45f8a',35,'delivered',CAST('2023-11-04 09:56:33' AS TIMESTAMP)),
 ('949d5b44dbf5de918fe9c16f97b45f8a',5,'lost',CAST('2023-11-04 10:56:33' AS TIMESTAMP)),
-('949d5b44dbf5de918fe9c16f97b45f8a',105,'lost',CAST('2023-11-04 11:56:33' AS TIMESTAMP));
-
-INSERT INTO local.warehouse.orders VALUES
+('949d5b44dbf5de918fe9c16f97b45f8a',105,'lost',CAST('2023-11-04 11:56:33' AS TIMESTAMP)),
 ('ad21c59c0840e6cb83a9ceb5573f8159',23,'delivered',CAST('2023-11-05 04:56:33' AS TIMESTAMP)),
 ('ad21c59c0840e6cb83a9ceb5573f8159',12,'on_route',CAST('2023-11-05 08:56:33' AS TIMESTAMP)),
-('ad21c59c0840e6cb83a9ceb5573f8159',19,'delivered',CAST('2023-11-05 10:56:33' AS TIMESTAMP));
-
-INSERT INTO local.warehouse.orders VALUES
+('ad21c59c0840e6cb83a9ceb5573f8159',19,'delivered',CAST('2023-11-05 10:56:33' AS TIMESTAMP)),
 ('a4591c265e18cb1dcee52889e2d8acc3',82,'lost',CAST('2023-11-06 10:45:33' AS TIMESTAMP)),
 ('a4591c265e18cb1dcee52889e2d8acc3',1234,'on_route',CAST('2023-11-06 12:45:33' AS TIMESTAMP));
 ```
@@ -118,9 +110,11 @@ INSERT INTO local.warehouse.orders VALUES
 ('e481f51cbdc54678b7cc49136f2d6af7',87,CAST('2023-11-14 10:56:33' AS TIMESTAMP));
 
 -- check snapshots
-select committed_at, snapshot_id, manifest_list from local.warehouse.orders.snapshots;
--- check schema change and partition change history
-select * from local.warehouse.orders.manifests;
+select committed_at, snapshot_id, manifest_list from local.warehouse.orders.snapshots order by committed_at desc;
+-- we will have 2, since we had 2 insert statements
+
+-- See the partitions column statistics and data files added per snapshot
+select added_snapshot_id, added_data_files_count, partition_summaries from local.warehouse.orders.manifests;
 ```
 
 ## Time Travel
@@ -128,17 +122,15 @@ select * from local.warehouse.orders.manifests;
 ```sql
 -- get the time of the first data snapshot
 select min(committed_at) as min_committed_at from local.warehouse.orders.snapshots;
--- e.g. 2023-11-17 11:05:34.307
+-- e.g. 2023-11-21 12:03:08.833
 
-INSERT INTO local.warehouse.orders VALUES 
-('e481f51cbdc54678b7cc49136f2d6af7',69,CAST('2023-11-20 09:56:33' AS TIMESTAMP)),
-('e481f51cbdc54678b7cc49136f2d6af7',87,CAST('2023-11-20 10:56:33' AS TIMESTAMP));
-
--- Query data as of that time or after
-SELECT * FROM local.warehouse.orders TIMESTAMP AS OF '2023-11-17 11:06:00.00';
+-- Query data as of the oldest committed_at (min_committed_at from the above query) time or after
+SELECT * FROM local.warehouse.orders TIMESTAMP AS OF '2023-11-21 12:03:08.833';
+-- 15 rows
 
 -- Query without time travel and you will see all the rows
 SELECT * FROM local.warehouse.orders;
+-- 17 rows
 ```
 
 ## Tagging 
@@ -148,15 +140,16 @@ SELECT * FROM local.warehouse.orders;
 select committed_at, snapshot_id, manifest_list from local.warehouse.orders.snapshots order by committed_at;
 
 -- Use your snapshot_id in as of version (pick the first snapshot_id from above)
-ALTER TABLE local.warehouse.orders CREATE TAG `CHANGE-01` AS OF VERSION 3277809923527865161 RETAIN 10 DAYS;
+ALTER TABLE local.warehouse.orders CREATE TAG `CHANGE-01` AS OF VERSION 510574069844552206 RETAIN 10 DAYS;
 
 INSERT INTO local.warehouse.orders VALUES 
 ('e481f51cbdc54678b7cc49136f2d6gh5',69,CAST('2023-11-21 09:56:33' AS TIMESTAMP));
 
--- you will see a difference of number of rows
-SELECT COUNT(*) FROM local.warehouse.orders;
-SELECT COUNT(*) FROM local.warehouse.orders VERSION AS OF 'CHANGE-01';
+-- you will see a difference of number of rows, since the 'CHANGE-01' VERSION represents an older table state
+SELECT COUNT(*) FROM local.warehouse.orders; -- 18
+SELECT COUNT(*) FROM local.warehouse.orders VERSION AS OF 'CHANGE-01'; -- 15
 ```
+
 ## Branching
 
 ```sql
@@ -165,6 +158,7 @@ CREATE TABLE local.warehouse.orders_agg(
     order_date date,
     num_orders int
 )  USING iceberg;
+
 INSERT INTO local.warehouse.orders_agg
 SELECT date(order_date) as order_date, count(order_id) as num_orders from local.warehouse.orders WHERE date(order_date) = '2023-11-02' GROUP BY 1;
 
@@ -188,11 +182,13 @@ SELECT date(order_date) as order_date, count(distinct order_id) as num_orders fr
 INSERT INTO local.warehouse.orders_agg.`branch_branch-v2`
 SELECT date(order_date) as order_date, count(distinct order_id) as num_orders from local.warehouse.orders WHERE date(order_date) = '2023-11-04' GROUP BY 1;
 
--- validate data, the v2 logic is correct
+-- validate logic, the v2 logic is correct
 select * from local.warehouse.orders_agg.`branch_branch-v1` order by order_date;
 select * from local.warehouse.orders_agg.`branch_branch-v2` order by order_date;
 
+-- The main branch is still at 2023-11-02 (2 days behind)
 select * from local.warehouse.orders_agg order by order_date desc; 
+
 -- push main branch to branch v2's state
 CALL local.system.fast_forward('warehouse.orders_agg', 'main', 'branch-v2');
 select * from local.warehouse.orders_agg order by order_date desc;
@@ -200,7 +196,7 @@ select * from local.warehouse.orders_agg order by order_date desc;
 
 ## Read from another system
 
-Exit your spark shell with `exit;` and docker with `exit`. From your project directory, in your terminal open duckdb (with duckdb command), run the following SQL command:
+Exit your spark shell with `exit;` and docker with `exit`. From your project directory, in your terminal open duckdb (with `duckdb` command), run the following SQL command:
 
 ```sql
 INSTALL iceberg;
