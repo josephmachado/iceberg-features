@@ -1,0 +1,23 @@
+{
+    "manifest_path": "/opt/spark/work-dir/iceberg-warehouse/warehouse/orders/metadata/8a66729d-005d-40cc-8813-fdd6637a17b7-m0.avro",
+    "manifest_length": 7478,
+    "partition_spec_id": 0,
+    "content": 0,
+    "sequence_number": 1,
+    "min_sequence_number": 1,
+    "added_snapshot_id": 6973664331858552000,
+    "added_data_files_count": 6,
+    "existing_data_files_count": 0,
+    "deleted_data_files_count": 0,
+    "added_rows_count": 15,
+    "existing_rows_count": 0,
+    "deleted_rows_count": 0,
+    "partitions": [
+        {
+            "contains_null": false,
+            "contains_nan": false,
+            "lower_bound": "zkwAAA==",
+            "upper_bound": "00wAAA=="
+        }
+    ]
+}
